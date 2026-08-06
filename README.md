@@ -2,7 +2,7 @@
 Pełna lista projektów znajduje się na stronie:
 https://jbackk-lang.github.io
 ---
-# math-validator-2.0
+# math-validator-3.0
 
 `math-validator-2.0` to druga generacja walidatora struktur matematycznych.  
 Został zaprojektowany tak, aby wykrywać nie tylko błędy składniowe, ale również
