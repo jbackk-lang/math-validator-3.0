@@ -1,0 +1,46 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "math-validator-2.0"
+version = "2.0.0"
+description = "Topologiczny walidator równań matematycznych"
+readme = "README.md"
+license = {text = "MIT"}
+authors = [
+    {name = "Jacek Kielich", email = "jbackk-lang@proton.me"}
+]
+requires-python = ">=3.8"
+dependencies = [
+    "numpy>=1.21.0",
+    "sympy>=1.9.0",
+    "pint>=0.19.0",
+    "fastapi>=0.85.0",
+    "uvicorn>=0.18.0"
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "black>=22.0.0",
+    "isort>=5.10.0",
+    "flake8>=5.0.0",
+    "mypy>=0.990",
+    "pdoc>=12.0.0"
+]
+
+[project.scripts]
+math-validate = "cli:main"
+
+[tool.black]
+line-length = 88
+target-version = ['py38']
+
+[tool.isort]
+profile = "black"
+line_length = 88
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
