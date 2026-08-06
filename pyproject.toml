@@ -1,0 +1,21 @@
+[project]
+name = "math-validator"
+version = "3.0.0"
+description = "Topologiczny walidator równań matematycznych — v3: logika symboliczna, jednostki, algebra liniowa, CLI, wtyczki."
+requires-python = ">=3.10"
+dependencies = [
+    "sympy>=1.12",
+    "numpy>=1.24",
+    "fastapi",
+    "uvicorn",
+]
+
+[project.optional-dependencies]
+dev = ["pytest"]
+
+[project.scripts]
+math-validator = "cli:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
