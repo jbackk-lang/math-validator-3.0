@@ -39,3 +39,48 @@ pip install -e .
 pip install -r requirements.txt
   }
 }
+🔧 Szybki Start
+python
+from math_validator import validate_equation
+
+# Podstawowa walidacja
+result = validate_equation("sin(x)^2 + cos(x)^2")
+print(result["status"])  # "SUCCESS"
+
+# Z analizą topologiczną
+result = validate_equation(
+    "1/(x-1)",
+    options={"topological": True, "simplify": True}
+)
+print(result["filters"]["singularity"]["status"])
+🧩 Przykłady problemów milenijnych
+1. Hipoteza Riemanna
+python
+validate_equation("ζ(s) = ∑_{n=1}^{∞} 1 / n^s")
+# Wykrywa: niejednoznaczność dziedziny, punkty osobliwe
+2. Równania Naviera–Stokesa
+python
+validate_equation("∂u/∂t + (u · ∇)u = -∇p + νΔu")
+# Wykrywa: brak określenia zmiennych, niekompletność operatorów
+📊 Filtry Topologiczne
+Filtr	Opis
+Informacyjny	Analiza przepływu informacji w wyrażeniu
+Składniowy	Walidacja struktury i tokenów
+Möbiusa	Sprawdzenie parzystości i orientacji
+Topologiczny	Detekcja przerw w strukturze węzłów
+Osobliwości	Wykrywanie punktów krytycznych
+📚 Dokumentacja
+Pełna dokumentacja API: https://jbackk-lang.github.io/math-validator
+
+🤝 Współpraca
+Zapraszamy do współpracy! Zobacz CONTRIBUTING.md aby dowiedzieć się więcej.
+
+📄 Licencja
+MIT License – zobacz LICENSE dla szczegółów.
+
+🔗 Linki
+Strona projektu
+
+TIMDR – system filtracji strukturalnej
+
+TRM – Model Redukcji Topologicznej
