@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Math Validator Studio v3</title>
+    <!-- Fonty i Ikony -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- MathJax dla ładnego renderowania wzorów -->
+    <script>
+        window.MathJax = {
+            tex: { inlineMath: [['$', '$'], ['\\(', '\\)']] },
+            svg: { fontCache: 'global' }
+        };
+    </script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+    <style>
+        :root {
+            --bg-body: #0f172a;
+            --bg-card: #1e293b;
+            --bg-input: #0f172a;
+            --border-color: #334155;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --primary: #6366f1;
+            --primary-hover: #4f46e5;
+            --success: #10b981;
+            --error: #ef4444;
+            --warning: #f59e0b;
+            --radius: 12px;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Header */
+        header {
+            background: var(--bg-card);
+            border-bottom: 1px solid var(--border-color);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .status-badge {
+            font-size: 0.85rem;
+            padding: 4px 10px;
+            border-radius: 20px;
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--success);
+            border: 1px solid rgba(16, 185, 129, 0.2);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .status-badge.offline {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--error);
+            border-color: rgba(239, 68, 68, 0.2);
+        }
+
+        /* Layout */
+        .container {
+            max-width: 1200px;
+            margin: 2rem auto;
+            width: 100%;
+            padding: 0 1rem;
+            flex: 1;
+        }
+
+        /* Navigation Tabs */
+        .tabs {
+            display: flex;
+            gap: 10px;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 2rem;
+            overflow-x: auto;
+        }
+
+        .tab-btn {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            padding: 12px 20px;
+            font-size: 0.95rem;
+            font-weight: 500;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            white-space: nowrap;
+        }
+
+        .tab-btn:hover { color: var(--text-main); }
+        .tab-btn.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+        }
+
+        /* Forms & Inputs */
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+        }
+
+        @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+        }
+
+        .card-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .form-group {
+            margin-bottom: 1.25rem;
+        }
+
+        label {
+            display: block;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+        }
+
+        input[type="text"], textarea, select {
+            width: 100%;
+            background: var(--bg-input);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 10px 14px;
+            border-radius: 8px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.95rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        input[type="text"]:focus, textarea:focus {
+            border-color: var(--primary);
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            user-select: none;
+            font-size: 0.9rem;
+            margin-top: 8px;
+        }
+
+        .checkbox-group input { cursor: pointer; }
+
+        button.btn-submit {
+            width: 100%;
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: background 0.2s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+        }
+
+        button.btn-submit:hover { background: var(--primary-hover); }
+
+        /* Results Display */
+        .result-container {
+            min-height: 200px;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .result-box {
+            background: var(--bg-input);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1rem;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.85rem;
+            overflow-x: auto;
+            max-height: 400px;
+        }
+
+        .latex-preview {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px dashed var(--border-color);
+            border-radius: 8px;
+            padding: 1.5rem;
+            text-align: center;
+            font-size: 1.2rem;
+            min-height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .badge-status {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        .badge-ok { background: var(--success); color: #000; }
+        .badge-error { background: var(--error); color: #fff; }
+
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+    </style>
+</head>
+<body>
+
+    <!-- Header -->
+    <header>
+        <div class="logo">
+            <i class="fa-solid fa-shapes"></i>
+            <span>Math Validator Studio</span>
+        </div>
+        <div id="api-status" class="status-badge">
+            <i class="fa-solid fa-circle" style="font-size: 8px;"></i>
+            <span>Sprawdzanie połączenia...</span>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- Navigation Tabs -->
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab('validate')"><i class="fa-solid fa-check-double"></i> Pełna Walidacja</button>
+            <button class="tab-btn" onclick="switchTab('logic')"><i class="fa-solid fa-diagram-project"></i> Logika Zdaniowa</button>
+            <button class="tab-btn" onclick="switchTab('matrix')"><i class="fa-solid fa-table-cells"></i> Macierze</button>
+            <button class="tab-btn" onclick="switchTab('solve')"><i class="fa-solid fa-calculator"></i> Równania & Pochodne</button>
+            <button class="tab-btn" onclick="switchTab('normalize')"><i class="fa-solid fa-wand-magic-sparkles"></i> Normalizacja</button>
+            <button class="tab-btn" onclick="switchTab('ambiguity')"><i class="fa-solid fa-triangle-exclamation"></i> Diagnostyka</button>
+        </div>
+
+        <!-- TAB 1: Pełna Walidacja -->
+        <div id="tab-validate" class="tab-content active">
+            <div class="grid">
+                <div class="card">
+                    <div class="card-title"><i class="fa-solid fa-terminal"></i> Analiza Wyrażenia</div>
+                    <form onsubmit="handleValidate(event)">
+                        <div class="form-group">
+                            <label>Wyrażenie Matematyczne</label>
+                            <input type="text" id="val-expr" value="(v * t) / 2" placeholder="np. 2*x + 3*x">
+                        </div>
+                        <div class="form-group">
+                            <label>Jednostki Fizyczne (JSON opcjonalnie)</label>
+                            <input type="text" id="val-units" value='{"v": "m/s", "t": "s"}' placeholder='{"v": "m/s"}'>
+                        </div>
+                        <div class="form-group">
+                            <label class="checkbox-group">
+                                <input type="checkbox" id="val-implicit"> Mnożenie niejawne wiąże silniej (np. 1/2x = 1/(2x))
+                            </label>
+                            <label class="checkbox-group">
+                                <input type="checkbox" id="val-power"> Lewostronna łączność potęgowania (a^b^c = (a^b)^c)
+                            </label>
+                        </div>
+                        <button type="submit" class="btn-submit"><i class="fa-solid fa-play"></i> Analizuj Wyrażenie</button>
+                    </form>
+                </div>
+                <div class="card">
+                    <div class="card-title"><i class="fa-solid fa-chart-pie"></i> Wyniki Analizy</div>
+                    <div class="result-container">
+                        <div id="val-preview" class="latex-preview">Podgląd matematyczny pojawi się tutaj</div>
+                        <pre id="val-result" class="result-box">Czekam na dane...</pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 2: Logika Zdaniowa -->
+        <div id="tab-logic" class="tab-content">
+            <div class="grid">
+                <div class="card">
+                    <div class="card-title"><i class="fa-solid fa-code-merge"></i> Formuła Logiczna</div>
+                    <form onsubmit="handleFormula(event)">
+                        <div class="form-group">
+                            <label>Formuła Logiczna (użyj: ∧, ∨, →, ¬)</label>
+                            <input type="text" id="logic-expr" value="(A ∧ B) → C">
+                        </div>
+                        <button type="submit" class="btn-submit"><i class="fa-solid fa-check"></i> Sprawdź Logikę</button>
+                    </form>
+                </div>
+                <div class="card">
+                    <div class="card-title"><i class="fa-solid fa-square-poll-vertical"></i> Wynik Walidacji</div>
+                    <pre id="logic-result" class="result-box">Czekam na dane...</pre>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 3: Macierze -->
+        <div id="tab-matrix" class="tab-content">
+            <div class="grid">
+                <div class="card">
+                    <div class="card-title"><i class="fa-solid fa-border-all"></i> Wyrażenie Macierzowe</div>
+                    <form onsubmit="handleMatrix(event)">
+                        <div class="form-group">
+                            <label>Składnia SymPy Matrix</label>
+                            <textarea id="matrix-expr" rows="4">Matrix([[1,2],[3,4]]) * Matrix([[1],[0]])</textarea>
+                        </div>
+                        <button type="submit" class="btn-submit"><i class="fa-solid fa-calculator"></i> Oblicz Wymiary</button>
+                    </form>
+                </div>
+                <div class="card">
+                    <div class="card-title"><i class="fa-solid fa-cubes"></i> Wymiary i Błędy</div>
+                    <pre id="matrix-result" class="result-box">Czekam na dane...</pre>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 4: Równania i Pochodne -->
+        <div id="tab-solve" class="tab-content">
+            <div class="grid">
+                <div class="card">
+                    <div class="card-title"><i class="fa-solid fa-square-root-variable"></i> Rozwiązywanie & Pochodne</div>
+                    <form onsubmit="handleSolve(event)">
+                        <div class="form-group">
+                            <label>Wyrażenie = 0</label>
+                            <input type="text" id="solve-expr" value="2*x**2 - 8">
+                        </div>
+                        <div class="form-group">
+                            <label>Zmienna</label>
+                            <input type="text" id="solve-var" value="x">
+                        </div>
+                        <div style="display: flex; gap: 10px;">
+                            <button type="button" onclick="executeSolve('solve')" class="btn-submit"><i class="fa-solid fa-key"></i> Rozwiąż</button>
+                            <button type="button" onclick="executeSolve('diff')" class="btn-submit" style="background: #8b5cf6;"><i class="fa-solid fa-wave-square"></i> Pochodna</button>
+                        </div>
+                    </form>
+                </div>
+                <div class="card">
+                    <div class="card-title"><i class="fa-solid fa-square-check"></i> Wynik Symboliczny</div>
+                    <div id="solve-preview" class="latex-preview">LaTeX Wynik</div>
+                    <pre id="solve-result" class="result-box">Czekam na dane...</pre>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 5: Normalizacja -->
+        <div id="tab-normalize" class="tab-content">
+            <div class="grid">
+                <div class="card">
+                    <div class="card-title"><i class="fa-solid fa-filter"></i> Uproszczenie Wyrażenia</div>
+                    <form onsubmit="handleNormalize(event)">
+                        <div class="form-group">
+                            <label>Wyrażenie Wejściowe</label>
+                            <input type="text" id="norm-expr" value="2*x + 3*x + x/x">
+                        </div>
+                        <button type="submit" class="btn-submit"><i class="fa-solid fa-bolt"></i> Znormalizuj</button>
+                    </form>
+                </div>
+                <div class="card">
+                    <div class="card-title"><i class="fa-solid fa-list-check"></i> Wynik i Zmiany Dziedziny</div>
+                    <pre id="norm-result" class="result-box">Czekam na dane...</pre>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 6: Diagnostyka -->
+        <div id="tab-ambiguity" class="tab-content">
+            <div class="grid">
+                <div class="card">
+                    <div class="card-title"><i class="fa-solid fa-bug"></i> Niejednoznaczności Zapisów</div>
+                    <form onsubmit="handleAmbiguity(event)">
+                        <div class="form-group">
+                            <label>Wyrażenie (np. 1/2x, a^b^c, -a^b)</label>
+                            <input type="text" id="amb-expr" value="1/2x">
+                        </div>
+                        <button type="submit" class="btn-submit"><i class="fa-solid fa-magnifying-glass"></i> Wykryj Pułapki</button>
+                    </form>
+                </div>
+                <div class="card">
+                    <div class="card-title"><i class="fa-solid fa-lightbulb"></i> Sugerowane Interpretacje</div>
+                    <pre id="amb-result" class="result-box">Czekam na dane...</pre>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        const API_URL = 'http://127.0.0.1:8000';
+
+        // Sprawdź status API
+        async function checkHealth() {
+            const badge = document.getElementById('api-status');
+            try {
+                const res = await fetch(`${API_URL}/health`);
+                if (res.ok) {
+                    badge.className = 'status-badge';
+                    badge.innerHTML = `<i class="fa-solid fa-circle" style="font-size: 8px;"></i> API Online (v3.0.0)`;
+                } else { throw new Error(); }
+            } catch {
+                badge.className = 'status-badge offline';
+                badge.innerHTML = `<i class="fa-solid fa-circle" style="font-size: 8px;"></i> Brak połączenia z API (127.0.0.1:8000)`;
+            }
+        }
+        checkHealth();
+        setInterval(checkHealth, 10000);
+
+        // Przełączanie zakładek
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            
+            event.currentTarget.classList.add('active');
+            document.getElementById(`tab-${tabId}`).classList.add('active');
+        }
+
+        // Pomocnik renderowania LaTeX
+        function renderMath(elementId, latexText) {
+            const el = document.getElementById(elementId);
+            el.innerHTML = `\\[ ${latexText} \\]`;
+            MathJax.typesetPromise([el]);
+        }
+
+        // --- HANDLERY API ---
+
+        async function handleValidate(e) {
+            e.preventDefault();
+            const expr = document.getElementById('val-expr').value;
+            let units = null;
+            try {
+                const unitsRaw = document.getElementById('val-units').value;
+                if(unitsRaw.trim()) units = JSON.parse(unitsRaw);
+            } catch(err) {
+                alert('Błąd w formacie JSON jednostek!');
+                return;
+            }
+
+            const body = {
+                expression: expr,
+                units: units,
+                implicit_mult_binds_tighter: document.getElementById('val-implicit').checked,
+                power_left_assoc: document.getElementById('val-power').checked
+            };
+
+            const res = await fetch(`${API_URL}/api/v3/validate`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(body)
+            });
+            const data = await res.json();
+            document.getElementById('val-result').innerText = JSON.stringify(data, null, 2);
+
+            // Wygeneruj podgląd LaTeX
+            fetchLaTeX(expr, 'val-preview');
+        }
+
+        async function handleFormula(e) {
+            e.preventDefault();
+            const formula = document.getElementById('logic-expr').value;
+            const res = await fetch(`${API_URL}/api/v3/validate/formula`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ formula })
+            });
+            const data = await res.json();
+            document.getElementById('logic-result').innerText = JSON.stringify(data, null, 2);
+        }
+
+        async function handleMatrix(e) {
+            e.preventDefault();
+            const expression = document.getElementById('matrix-expr').value;
+            const res = await fetch(`${API_URL}/api/v3/validate/matrix`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ expression })
+            });
+            const data = await res.json();
+            document.getElementById('matrix-result').innerText = JSON.stringify(data, null, 2);
+        }
+
+        async function executeSolve(type) {
+            const expression = document.getElementById('solve-expr').value;
+            const variable = document.getElementById('solve-var').value;
+            const res = await fetch(`${API_URL}/api/v3/${type}`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ expression, variable })
+            });
+            const data = await res.json();
+            document.getElementById('solve-result').innerText = JSON.stringify(data, null, 2);
+            
+            if(data.result) {
+                renderMath('solve-preview', `${variable} = ${data.result}`);
+            } else {
+                fetchLaTeX(expression, 'solve-preview');
+            }
+        }
+
+        async function handleNormalize(e) {
+            e.preventDefault();
+            const expression = document.getElementById('norm-expr').value;
+            const res = await fetch(`${API_URL}/api/v3/normalize`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ expression })
+            });
+            const data = await res.json();
+            document.getElementById('norm-result').innerText = JSON.stringify(data, null, 2);
+        }
+
+        async function handleAmbiguity(e) {
+            e.preventDefault();
+            const expression = document.getElementById('amb-expr').value;
+            const res = await fetch(`${API_URL}/api/v3/diagnose/ambiguity`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ expression })
+            });
+            const data = await res.json();
+            document.getElementById('amb-result').innerText = JSON.stringify(data, null, 2);
+        }
+
+        async function fetchLaTeX(expression, targetElId) {
+            try {
+                const res = await fetch(`${API_URL}/api/v3/render/latex`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ expression })
+                });
+                const data = await res.json();
+                if(data.latex) renderMath(targetElId, data.latex);
+            } catch {}
+        }
+    </script>
+</body>
+</html>
