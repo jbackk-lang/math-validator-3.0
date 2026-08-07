@@ -1,4 +1,4 @@
-# math-validator
+# math-validator 3.0
 
 **Walidator wyrażeń matematycznych: składnia, algebra, logika zdaniowa, jednostki fizyczne i algebra liniowa.**
 
@@ -7,7 +7,7 @@
 
 ## Opis
 
-`math-validator` sprawdza wyrażenia matematyczne pod kątem błędów, które sama
+`math-validator 3.0` sprawdza wyrażenia matematyczne pod kątem błędów, które sama
 biblioteka SymPy przepuściłaby bez ostrzeżenia — złej składni, niejednoznacznej
 notacji, "cichej" utraty osobliwości przy upraszczaniu, niespójności wymiarowej
 (fizyka: metry + sekundy), czy niezgodności wymiarów macierzy przed mnożeniem.
