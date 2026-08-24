@@ -17,7 +17,9 @@ from pydantic import BaseModel, Field
 
 # Importy wewnętrznych modułów walidatora
 from ambiguity import PrecedenceConfig, find_ambiguities
+from core import parse
 from errors import diagnose_syntax
+from filters.millennium_filter import MILLENNIUM_PROBLEMS, run as run_millennium
 from linalg import validate_matrix_expression
 from normalize import normalize_expression
 from pipeline_v3 import validate_all
@@ -40,6 +42,7 @@ app = FastAPI(
         {"name": "Walidacja", "description": "Główne punkty końcowe analizy wyrażeń."},
         {"name": "Przekształcenia", "description": "Normalizacja, rozwiązywanie i pochodne."},
         {"name": "Diagnostyka", "description": "Analiza niejednoznaczności i błędów składni."},
+        {"name": "Problemy Milenijne", "description": "Wykrywanie powiązań wyrażenia z 7 Problemami Milenijnymi."},
         {"name": "System", "description": "Status działania usługi."},
     ],
 )
@@ -98,6 +101,13 @@ class AmbiguityRequest(BaseModel):
     expression: str = Field(..., examples=["1/2x"], description="Wyrażenie potencjalnie niejednoznaczne")
     implicit_mult_binds_tighter: bool = False
     power_left_assoc: bool = False
+
+class MillenniumRequest(BaseModel):
+    expression: str = Field(
+        ...,
+        examples=["zeta(1/2 + I*t)"],
+        description="Wyrażenie sprawdzane pod kątem powiązań z Problemami Milenijnymi"
+    )
 
 # ==============================================================================
 # ENDPOINTY SYSTEMOWE
@@ -200,3 +210,45 @@ def check_ambiguity(req: AmbiguityRequest) -> Dict[str, Any]:
 def check_syntax(expr: str = Query(..., examples=["sin(x + 2"])) -> Dict[str, Any]:
     """Wskazuje dokładną pozycję błędu składniowego wraz z czytelnym wskaźnikiem i podpowiedzią."""
     return diagnose_syntax(expr)
+
+# ==============================================================================
+# ENDPOINTY PROBLEMÓW MILENIJNYCH
+# ==============================================================================
+# UWAGA: filters/millennium_filter.py był już od dawna wpięty w validate_all()
+# (klucz "millennium" w pełnej odpowiedzi /api/v3/validate), ale pogrzebany
+# wśród ~15 innych kluczy - łatwo go było przeoczyć. Poniższe dwa endpointy
+# eksponują go bezpośrednio: jeden do sprawdzenia konkretnego wyrażenia,
+# drugi jako statyczny katalog wszystkich 7 problemów (do zbudowania np.
+# listy/tooltipów we froncie bez konieczności wysyłania wyrażenia).
+
+@app.post(
+    "/api/v3/millennium",
+    tags=["Problemy Milenijne"],
+    summary="Sprawdź powiązanie wyrażenia z Problemami Milenijnymi",
+)
+def check_millennium(req: MillenniumRequest) -> Dict[str, Any]:
+    """
+    Analizuje wyrażenie pod kątem słów kluczowych i struktur symbolicznych
+    powiązanych z 7 Problemami Milenijnymi (P vs NP, hipoteza Riemanna,
+    Bircha-Swinnertona-Dyera, Yang-Mills, Naviera-Stokesa, Poincarégo,
+    Hodge'a). Działa nawet gdy wyrażenie się nie sparsuje symbolicznie -
+    detekcja słów kluczowych operuje na surowym tekście.
+    """
+    parsed = parse(req.expression)
+    return run_millennium(parsed)
+
+@app.get(
+    "/api/v3/millennium/problems",
+    tags=["Problemy Milenijne"],
+    summary="Katalog wszystkich 7 Problemów Milenijnych",
+)
+def list_millennium_problems() -> Dict[str, Any]:
+    """Zwraca statyczną listę wszystkich Problemów Milenijnych (nazwa, status
+    OPEN/SOLVED, opis, słowa kluczowe) - bez analizy żadnego wyrażenia."""
+    return {
+        "count": len(MILLENNIUM_PROBLEMS),
+        "problems": [
+            {"key": key, **{k: v for k, v in info.items() if k != "keywords"}}
+            for key, info in MILLENNIUM_PROBLEMS.items()
+        ],
+    }

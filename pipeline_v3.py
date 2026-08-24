@@ -20,6 +20,7 @@ from core import parse
 from filters import (
     syntax_filter, algebra_filter, logic_filter, misleading_filter,
     harmonic_filter, information_filter, numeric_filter, prime_spectrum_filter,
+    millennium_filter, moebius_filter, singularity_filter, topology_filter,
 )
 from filters.symbolic_logic_filter import run_formula
 from units import analyze_units
@@ -71,6 +72,13 @@ def validate_all(
         result["information"] = information_filter.run(parsed)
         result["numeric"] = numeric_filter.run(parsed)
         result["prime_spectrum"] = prime_spectrum_filter.run(parsed)
+        # POPRAWKA: te 4 filtry istniały w v2.0 ale zniknęły w v3.0 (nie
+        # skopiowano ich przy migracji) - użytkownik poprosił, by kolejne
+        # wersje zawierały w sobie poprzednie (superset), więc przywrócono.
+        result["millennium"] = millennium_filter.run(parsed)
+        result["moebius"] = moebius_filter.run(parsed)
+        result["singularity"] = singularity_filter.run(parsed)
+        result["topology"] = topology_filter.run(parsed)
 
         # ── Moduły v3 ──────────────────────────────────────────────────
         result["normalize"] = normalize_expression(expr)

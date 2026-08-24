@@ -38,7 +38,15 @@ api = [
 math-validate = "math_validator.cli:main"
 
 [tool.setuptools]
-# Wyłącz automatyczne wykrywanie - użyj jawnej listy
+# POPRAWKA: `packages = [...]` (jawna lista) i `[tool.setuptools.packages.find]`
+# (auto-wykrywanie) to dwa WYKLUCZAJĄCE SIĘ sposoby konfiguracji tej samej
+# tabeli TOML `tool.setuptools.packages` - obecność obu naraz to nie tylko
+# konflikt semantyczny w setuptools, ale zwyczajnie NIEPOPRAWNY TOML (parser
+# zgłasza "Cannot declare ('tool', 'setuptools', 'packages', 'find') twice"),
+# co blokowało `pip install -e .` i `pytest` (przez konfigurację w tym samym
+# pliku) całkowicie - zanim jakikolwiek test mógł się uruchomić. Zostawiono
+# jawną listę (już poprawnie pomija plugins_examples/tests, których nie ma
+# na liście) i usunięto sprzeczny blok auto-wykrywania.
 packages = [
     "core",
     "filters",
@@ -47,7 +55,3 @@ packages = [
     "test",
     "tests"
 ]
-
-# Wyklucz niechciane foldery
-[tool.setuptools.packages.find]
-exclude = ["plugins_examples", "*.tests", "*.tests.*", "tests.*"]

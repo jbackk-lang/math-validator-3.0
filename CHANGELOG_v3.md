@@ -70,10 +70,33 @@ pip install sympy numpy fastapi uvicorn
 
 ```bash
 pytest test/test_v3.py -v
+pytest test/test_restored_filters_v3.py -v
 ```
-19/19 testów przechodzi (logika symboliczna, jednostki, normalizacja,
+19/19 testów `test_v3.py` (logika symboliczna, jednostki, normalizacja,
 zmienne, niejednoznaczność, algebra liniowa, diagnostyka błędów, most
-sympy, wtyczki).
+sympy, wtyczki) + 9/9 `test_restored_filters_v3.py` (patrz sekcja
+"Poprawka: brakujące filtry z v2.0" niżej) = 28/28 razem.
+
+## Poprawka: brakujące filtry z v2.0 (2026-08-24)
+
+Przy migracji z `math-validator-v2.0` do v3 nie skopiowano czterech z
+dwunastu filtrów: `filters/millennium_filter.py` (Problemy Milenijne),
+`filters/moebius_filter.py` (struktury Möbiusa), `filters/singularity_filter.py`
+(osobliwości i skręty τ) oraz `filters/topology_filter.py` (dziedzina
+ciągłości). W efekcie v3, mimo że w tym pliku i w README opisywana jest
+jako rozszerzenie v2 ("wersja poprawiona i rozbudowana"), faktycznie miała
+mniej filtrów niż v2 — nie była jej nadzbiorem. Poprawiono: pliki
+skopiowane 1:1 (core.py jest identyczny w obu wersjach, więc interfejs
+`run(parsed: ParsedExpr) -> dict` jest w pełni kompatybilny bez zmian),
+wpięte do `pipeline_v3.validate_all()` pod kluczami `millennium`,
+`moebius`, `singularity`, `topology`, dodane testy integracyjne.
+
+Dodatkowo: `pyproject.toml` miał nieprawidłowy TOML — `[tool.setuptools]`
+z jawną listą `packages = [...]` współistniał z `[tool.setuptools.packages.find]`
+(dwie wykluczające się metody konfiguracji tej samej tabeli), co blokowało
+`pip install -e .` i uruchomienie `pytest` w ogóle (błąd parsera: "Cannot
+declare ('tool', 'setuptools', 'packages', 'find') twice"). Usunięto
+sprzeczny blok auto-wykrywania, zostawiając jawną listę.
 
 ## Znane ograniczenia / uwagi dla dalszej pracy
 - `units.py` zakłada, że zmienna bez podanej jednostki jest bezwymiarowa —
@@ -83,7 +106,10 @@ sympy, wtyczki).
   żeby wykryć niejednoznaczność *przed* tym, jak Python/sympy już ją
   rozstrzygnie przy parsowaniu). To działa dobrze dla prostych przypadków;
   dla w pełni ogólnego rozwiązania warto rozważyć własny tokenizer.
-- Reszta repo (`topology.py`, `moebius_parity.py`, `entropy_flow.py`,
-  `lambda_stabilizer.py`, `khipu_knot_check.py` itd.) to osobna,
-  niezależna warstwa pseudofizycznych metafor projektu — v3 jej nie
-  rusza i nie jest od niej zależne.
+- POPRAWKA (2026-08-24): poprzednia wersja tego pliku twierdziła, że repo
+  zawiera dodatkowo osobną "warstwę pseudofizycznych metafor" (`topology.py`,
+  `moebius_parity.py`, `entropy_flow.py`, `lambda_stabilizer.py`,
+  `khipu_knot_check.py`). Sprawdzono bezpośrednio w repozytorium — żaden
+  z tych plików nie istnieje nigdzie w drzewie katalogów. To była
+  nieaktualna/błędna dokumentacja, nie rzeczywisty stan kodu — usunięto
+  fałszywe twierdzenie zamiast je powielać.

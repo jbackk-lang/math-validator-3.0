@@ -1,4 +1,5 @@
-# math-validator 3.0
+# math-validator
+
 **Walidator wyrażeń matematycznych: składnia, algebra, logika zdaniowa, jednostki fizyczne i algebra liniowa.**
 
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
@@ -6,73 +7,78 @@
 
 ## Opis
 
-math-validator 3.0 wykrywa błędy, które SymPy przepuszcza bez ostrzeżenia: złą składnię, niejednoznaczność zapisu, utratę osobliwości przy upraszczaniu, niespójność wymiarową (metry + sekundy), błędne wymiary macierzy przed mnożeniem oraz sprzeczne formuły logiki zdaniowej.
+`math-validator` sprawdza wyrażenia matematyczne pod kątem błędów, które sama
+biblioteka SymPy przepuściłaby bez ostrzeżenia — złej składni, niejednoznacznej
+notacji, "cichej" utraty osobliwości przy upraszczaniu, niespójności wymiarowej
+(fizyka: metry + sekundy), czy niezgodności wymiarów macierzy przed mnożeniem.
 
-Obsługiwane domeny:
-- Algebraiczne wyrażenia
-- Logika zdaniowa
-- Algebra liniowa
+Obsługuje trzy niezależne domeny walidacji:
+
+- **wyrażenia algebraiczne** — `2*x + 3*x`, `(x**2-1)/(x-1)`, `sin(x)^2 + cos(x)^2`
+- **formuły logiki zdaniowej** — `(A ∧ B) → C`
+- **wyrażenia macierzowe** — `Matrix([[1,2],[3,4]]) * Matrix([[1],[0]])`
 
 ## Instalacja
 
-Wymagany Python 3.10+.  
-Zależności runtime: sympy, numpy.
-
-### Windows — szybki start (run.bat)
-
-1. Pobierz repozytorium:
-   git clone https://github.com/jbackk-lang/math-validator-3.0.git
-   cd math-validator-3.0
-
-2. Uruchom run.bat.
-
-Skrypt:
-- instaluje brakujące pakiety,
-- uruchamia API (python -m uvicorn api:app),
-- otwiera WebGUI (index.html).
-
-### Linux / macOS
-
+```bash
 git clone https://github.com/jbackk-lang/math-validator-3.0.git
 cd math-validator-3.0
-pip install -e ".[dev]"
-# lub:
+pip install -e ".[dev]"     # instalacja edytowalna + narzędzia deweloperskie
+# albo bez trybu editable:
 pip install -r requirements.txt
+```
+uvicorn api:app --reload
+index.html
 
-Warstwa HTTP:
-pip install -e ".[api]"
+Wymaga Pythona 3.10+. Zależności runtime rdzenia to tylko `sympy` i `numpy`.
+Warstwa HTTP (`api.py`) jest opcjonalna — potrzebuje dodatkowo `fastapi`/`uvicorn`,
+instalowanych przez `pip install -e ".[api]"` (patrz sekcja "API HTTP" niżej).
 
-## Szybki start — Python
+## Szybki start
 
-### Algebra
+### Python
+
+```python
 from pipeline_v3 import validate_all
 
 result = validate_all("2*x + 3*x")
-print(result["status"])
-print(result["normalize"]["normalized"])
+print(result["status"])                    # "ok"
+print(result["normalize"]["normalized"])   # "5*x"
+```
 
-### Logika zdaniowa
+```python
+# Formuła logiki zdaniowej
 result = validate_all("(A ∧ B) → C", formula=True)
-print(result["symbolic_logic"]["is_tautology"])
+print(result["symbolic_logic"]["is_tautology"])   # False
 
 result = validate_all("A ∨ ¬A", formula=True)
-print(result["symbolic_logic"]["is_tautology"])
+print(result["symbolic_logic"]["is_tautology"])   # True
+```
 
-### Jednostki fizyczne
+```python
+# Analiza wymiarowa
 from units import analyze_units
 r = analyze_units("v*t + 0.5*a*t**2", {"v": "m/s", "t": "s", "a": "m/s**2"})
-print(r["status"], r["result_dimension"])
+print(r["status"], r["result_dimension"])   # ok m
 
 r = analyze_units("x + t", {"x": "m", "t": "s"})
-print(r["status"])
+print(r["status"])   # error — metry + sekundy
+```
 
-### Algebra liniowa
+```python
+# Algebra liniowa
 from linalg import validate_matrix_expression
 r = validate_matrix_expression("Matrix([[1,2,3],[4,5,6]]) * Matrix([[1,2],[3,4]])")
 print(r["status"], r["message"])
+# error — nie można pomnożyć macierzy 2x3 przez 2x2 (kolumny lewej != wiersze prawej)
+```
 
-## CLI
+Więcej działających przykładów: [`examples/basic_usage.py`](examples/basic_usage.py),
+[`examples/topological_analysis.py`](examples/topological_analysis.py).
 
+### CLI
+
+```bash
 python cli.py "2+2*3"
 python cli.py "x/x" --pretty
 python cli.py "(A ∧ B) → C" --formula
@@ -81,79 +87,147 @@ python cli.py "v*t" --units v=m/s --units t=s
 python cli.py "2*x + 3*x" --normalize-only
 python cli.py "x**2 - 4" --solve x
 echo "2+2*3" | python cli.py -
+```
 
-Po instalacji:
-math-validator "2+2*3"
+Po `pip install -e .` dostępne też jako komenda `math-validator`. Flaga
+`--fail-on-issues` ustawia kod wyjścia 1, gdy wynik nie jest czysty — przydatne
+w CI/CD.
 
-## Co wykrywa?
+## Co konkretnie wykrywa
 
-Składnia — filters/syntax_filter.py  
-Algebra — filters/algebra_filter.py  
-Logika algebraiczna — filters/logic_filter.py  
-Mylące uproszczenia — filters/misleading_filter.py  
-Harmoniczny — filters/harmonic_filter.py  
-Informacyjny — filters/information_filter.py  
-Numeryczny — filters/numeric_filter.py  
-Widmo liczb pierwszych — filters/prime_spectrum_filter.py  
-Logika zdaniowa — filters/symbolic_logic_filter.py  
-Jednostki SI — units.py  
-Normalizacja — normalize.py  
-Zmienne — variables.py  
-Niejednoznaczność — ambiguity.py  
-Algebra liniowa — linalg.py  
-Diagnostyka błędów — errors.py  
+| Filtr | Plik | Co sprawdza |
+|---|---|---|
+| Składnia | `filters/syntax_filter.py` | niedomknięte nawiasy, podwójne operatory, puste nawiasy |
+| Algebra | `filters/algebra_filter.py` | podstawowa poprawność algebraiczna |
+| Logika (algebraiczna) | `filters/logic_filter.py` | `zoo`/`oo`/`nan` w wyniku wyrażenia |
+| Mylące uproszczenia | `filters/misleading_filter.py` | pozornie poprawne, ale niespójne zapisy |
+| Harmoniczny | `filters/harmonic_filter.py` | obecność funkcji trygonometrycznych, okresowość |
+| Informacyjny | `filters/information_filter.py` | entropia i redundancja symboli w zapisie |
+| Numeryczny | `filters/numeric_filter.py` | rozwiązania rzeczywiste vs zespolone |
+| Widmo pierwszych | `filters/prime_spectrum_filter.py` | analiza wyrażeń całkowitych pod kątem rozkładu liczb pierwszych |
+| Problemy Milenijne | `filters/millennium_filter.py` | wykrywa powiązania wyrażenia z 7 Problemami Milenijnymi (Riemann, P vs NP, Navier-Stokes...) |
+| Möbius | `filters/moebius_filter.py` | wykrywa odwrócenia/pętle/transformacje zmieniające orientację wyrażenia |
+| Osobliwości | `filters/singularity_filter.py` | osobliwości i skręty τ (lim 0⁺ ≠ lim 0⁻) |
+| Topologia | `filters/topology_filter.py` | dziedzina ciągłości wyrażenia (`continuous_domain`) |
+| Logika zdaniowa | `filters/symbolic_logic_filter.py` | `(A ∧ B) → C`: tautologia/sprzeczność/spełnialność, CNF/DNF |
+| Jednostki | `units.py` | spójność wymiarowa SI (nie doda metrów do sekund) |
+| Normalizacja | `normalize.py` | uproszczenie + wykrycie utraconej osobliwości |
+| Zmienne | `variables.py` | wolne vs związane (`Sum`, `Integral`, `Derivative`...) |
+| Niejednoznaczność | `ambiguity.py` | `a/b*c`, `a^b^c`, `-a^b`, `1/2x` + sugestie nawiasów |
+| Algebra liniowa | `linalg.py` | wymiary macierzy przed mnożeniem/dodawaniem/odwracaniem |
+| Diagnostyka błędów | `errors.py` | pozycja błędu + "czy chodziło o..." dla literówek w nazwach funkcji |
 
-## Wtyczki
+Wszystkie 12 filtrów z powyższej tabeli (oprócz `symbolic_logic_filter`) jest
+spiętych automatycznie przez `pipeline_v3.validate_all()`. `symbolic_logic_filter`
+i `linalg` mają osobne tryby wejścia (`formula=True`, `matrix=True`), bo
+operują na innej gramatyce niż zwykłe wyrażenia algebraiczne.
 
+`millennium`, `moebius`, `singularity`, `topology` pochodzą z `math-validator-v2.0`
+i istniały tam od początku — zniknęły przy pierwszej migracji do v3 (nie
+zostały skopiowane), przywrócono je 2026-08-24, patrz `CHANGELOG_v3.md`.
+
+## Rozszerzalność (wtyczki)
+
+Własny filtr bez modyfikowania rdzenia:
+
+```python
 import plugins
 
 @plugins.register_filter("moj_filtr")
 def run(p):
     return {"status": "ok"}
+```
 
+albo automatyczne ładowanie katalogu:
+
+```python
 plugins.load_plugins_from_dir("plugins_examples")
+```
 
-## Struktura repozytorium
+Przykład: [`plugins_examples/no_negative_sqrt.py`](plugins_examples/no_negative_sqrt.py).
 
-core.py, parser.py  
-algebra.py, logic.py  
-filters/  
-pipeline_v3.py  
-units.py, normalize.py  
-variables.py, ambiguity.py  
-linalg.py, errors.py  
-sympy_bridge.py, plugins.py  
-cli.py  
-api.py  
-run.bat  
-examples/  
-test/  
-docs/
+## Struktura repo
 
-## API HTTP & WebGUI
+```
+core.py, parser.py          # parsowanie wyrażeń -> ParsedExpr
+algebra.py, logic.py        # cienkie wrappery nad filters/algebra_filter, filters/logic_filter
+filters/                    # pojedyncze reguły walidacji, każdy z run(parsed) -> dict
+pipeline_v3.py               # spina wszystkie filtry + wtyczki w jedno validate_all()
+units.py, normalize.py,     # moduły v3 — patrz CHANGELOG_v3.md po szczegóły
+variables.py, ambiguity.py,
+linalg.py, errors.py,
+sympy_bridge.py, plugins.py
+cli.py                      # interfejs linii poleceń
+api.py                      # opcjonalna warstwa HTTP (FastAPI) nad validate_all()
+examples/                   # działające przykłady użycia API
+test/                       # pytest, 28 testów (19 moduły v3 + 9 filtry przywrócone z v2.0)
+docs/                       # statyczne materiały (index.html, grafika) — niepodłączone do kodu
+```
 
-Windows:
-run.bat → WebGUI + API pod http://127.0.0.1:8000
+## API HTTP (opcjonalne)
 
-Ręcznie:
-pip install -e ".[api]"
-python -m uvicorn api:app --reload
+Poza CLI i użyciem bezpośrednio z Pythona, repo zawiera cienką warstwę HTTP
+nad `pipeline_v3.validate_all()`, zbudowaną na FastAPI:
 
-Swagger UI:
-http://127.0.0.1:8000/docs
+```bash
+pip install -e ".[api]"     # doinstaluje fastapi + uvicorn
+uvicorn api:app --reload
+```
+
+Interaktywna dokumentacja (Swagger UI): http://127.0.0.1:8000/docs
+WebGUI strona index.html
 
 Endpointy:
-GET /health  
-POST /validate  
-POST /validate/formula  
-POST /validate/matrix  
-POST /solve  
-POST /latex  
+
+| Metoda | Ścieżka | Co robi |
+|---|---|---|
+| GET | `/health` | prosty health-check |
+| POST | `/validate` | pełna walidacja wyrażenia algebraicznego (opcjonalnie `units`) |
+| POST | `/validate/formula` | walidacja formuły logiki zdaniowej |
+| POST | `/validate/matrix` | walidacja wyrażenia macierzowego |
+| POST | `/solve` | rozwiązuje `wyrażenie = 0` względem zmiennej |
+| POST | `/latex` | zwraca zapis LaTeX wyrażenia |
+| POST | `/millennium` | sprawdza wyrażenie pod kątem powiązań z 7 Problemami Milenijnymi |
+| GET | `/millennium/problems` | statyczny katalog wszystkich 7 Problemów Milenijnych (nazwa, status, opis) |
+
+Przykład:
+
+```bash
+curl -X POST http://127.0.0.1:8000/validate \
+  -H "Content-Type: application/json" \
+  -d '{"expression": "2*x + 3*x"}'
+```
+
+`millennium_filter` był od dawna wpięty w `validate_all()`, ale pogrzebany
+wśród ~15 innych kluczy pełnej odpowiedzi. Dwa dedykowane endpointy
+wystawiają go bezpośrednio:
+
+```bash
+curl -X POST http://127.0.0.1:8000/millennium \
+  -H "Content-Type: application/json" \
+  -d '{"expression": "zeta(1/2 + I*t)"}'
+# {"triggered": true, "matches": [{"name": "Hipoteza Riemanna", ...}], ...}
+
+curl http://127.0.0.1:8000/millennium/problems
+# {"count": 7, "problems": [{"key": "Riemann", "status": "OPEN", ...}, ...]}
+```
 
 ## Testy
 
+```bash
 pytest -v
+```
+
+## Dokumentacja zmian v3
+
+Pełny opis funkcji dodanych w wersji 3 (logika symboliczna, jednostki,
+normalizacja, algebra liniowa, CLI, wtyczki, bogatsze błędy) — patrz
+[`CHANGELOG_v3.md`](CHANGELOG_v3.md).
+
+## Współpraca
+
+Zobacz [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 ## Licencja
 
-MIT — patrz LICENSE.
+MIT — zobacz [`LICENSE`](LICENSE).
