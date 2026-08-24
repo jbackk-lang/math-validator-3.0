@@ -95,7 +95,7 @@
         /* Navigation Tabs */
         .tabs {
             display: flex;
-            gap: 10px;
+            gap: 2px;
             border-bottom: 1px solid var(--border-color);
             margin-bottom: 2rem;
             overflow-x: auto;
@@ -105,15 +105,15 @@
             background: none;
             border: none;
             color: var(--text-muted);
-            padding: 12px 20px;
-            font-size: 0.95rem;
+            padding: 9px 12px;
+            font-size: 0.8rem;
             font-weight: 500;
             cursor: pointer;
             border-bottom: 2px solid transparent;
             transition: all 0.2s;
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 6px;
             white-space: nowrap;
         }
 
@@ -268,6 +268,34 @@
             font-size: 0.7rem; font-weight: 700; padding: 3px 8px; border-radius: 10px;
             text-transform: uppercase; white-space: nowrap; flex-shrink: 0;
         }
+
+        .mill-item { flex-wrap: wrap; }
+        .mill-item .mill-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+
+        .btn-small {
+            background: none;
+            border: 1px solid var(--border-color);
+            color: var(--text-muted);
+            padding: 5px 10px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            white-space: nowrap;
+        }
+        .btn-small:hover { color: var(--text-main); border-color: var(--primary); background: rgba(99, 102, 241, 0.1); }
+
+        .card-title-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        .card-title-row .card-title { margin-bottom: 0; }
 
         .tab-content { display: none; }
         .tab-content.active { display: block; }
@@ -457,7 +485,10 @@
                     <pre id="mill-result" class="result-box" style="margin-top: 1.25rem;">Czekam na dane...</pre>
                 </div>
                 <div class="card">
-                    <div class="card-title"><i class="fa-solid fa-list-ol"></i> Katalog 7 Problemów Milenijnych</div>
+                    <div class="card-title-row">
+                        <div class="card-title"><i class="fa-solid fa-list-ol"></i> Katalog 7 Problemów Milenijnych</div>
+                        <button type="button" class="btn-small" onclick="loadMillenniumCatalog()"><i class="fa-solid fa-rotate"></i> Odśwież</button>
+                    </div>
                     <div id="mill-catalog" style="display: flex; flex-direction: column; gap: 10px;">Ładowanie katalogu...</div>
                 </div>
             </div>
@@ -618,8 +649,27 @@
             }
         }
 
-        async function loadMillenniumCatalog() {
+        // Przykładowe wyrażenia do przycisku "Wypełnij" przy każdym problemie
+        const MILLENNIUM_EXAMPLES = {
+            P_vs_NP: 'NP-complete',
+            Riemann: 'zeta(1/2 + I*t)',
+            Birch_Swinnerton_Dyer: 'elliptic curve rank',
+            Yang_Mills: 'SU(3) gauge mass gap',
+            Navier_Stokes: 'Navier-Stokes velocity pressure',
+            Poincare: 'Poincare 3-manifold simply connected',
+            Hodge: 'Hodge cohomology de Rham',
+        };
+
+        function fillMillenniumExample(key) {
+            const expr = MILLENNIUM_EXAMPLES[key];
+            if (!expr) return;
+            document.getElementById('mill-expr').value = expr;
+            handleMillennium(new Event('submit'));
+        }
+
+        async function loadMillenniumCatalog(attempt = 1) {
             const el = document.getElementById('mill-catalog');
+            if (attempt === 1) el.innerHTML = 'Ładowanie katalogu...';
             try {
                 const res = await fetch(`${API_URL}/api/v3/millennium/problems`);
                 if (!res.ok) throw new Error('HTTP ' + res.status);
@@ -630,11 +680,28 @@
                             <div class="mill-name">${p.name}</div>
                             <div class="mill-desc">${p.description}</div>
                         </div>
-                        <span class="${p.status === 'SOLVED' ? 'badge-solved' : 'badge-open'}">${p.status}</span>
+                        <div class="mill-right">
+                            <button type="button" class="btn-small" onclick="fillMillenniumExample('${p.key}')"><i class="fa-solid fa-arrow-turn-up"></i> Sprawdź</button>
+                            <span class="${p.status === 'SOLVED' ? 'badge-solved' : 'badge-open'}">${p.status}</span>
+                        </div>
                     </div>
                 `).join('');
             } catch (err) {
-                el.innerHTML = '<span style="color: var(--text-muted); font-size: 0.85rem;">Nie udało się pobrać katalogu (API offline?)</span>';
+                // API mogło jeszcze nie wystartować (import sympy trwa kilka
+                // sekund) - ponów próbę kilka razy zanim pokażemy błąd, żeby
+                // nie było potrzeby ręcznego klikania "Odśwież" za każdym razem.
+                if (attempt < 4) {
+                    setTimeout(() => loadMillenniumCatalog(attempt + 1), 1500 * attempt);
+                    el.innerHTML = `<span style="color: var(--text-muted); font-size: 0.85rem;">Łączenie z API... (próba ${attempt}/4)</span>`;
+                } else {
+                    el.innerHTML = `
+                        <span style="color: var(--text-muted); font-size: 0.85rem;">
+                            Nie udało się pobrać katalogu. Sprawdź czy API działa
+                            (<code>uvicorn api:app --reload</code>) pod adresem ${API_URL}.
+                        </span>
+                        <button type="button" class="btn-small" style="margin-top: 8px; align-self: flex-start;" onclick="loadMillenniumCatalog()"><i class="fa-solid fa-rotate"></i> Spróbuj ponownie</button>
+                    `;
+                }
             }
         }
 
