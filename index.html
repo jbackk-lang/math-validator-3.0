@@ -250,6 +250,25 @@
         .badge-ok { background: var(--success); color: #000; }
         .badge-error { background: var(--error); color: #fff; }
 
+        .mill-item {
+            background: var(--bg-input);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+        }
+        .mill-item .mill-name { font-weight: 600; font-size: 0.9rem; }
+        .mill-item .mill-desc { font-size: 0.78rem; color: var(--text-muted); margin-top: 2px; }
+        .badge-open { background: rgba(245, 158, 11, 0.15); color: var(--warning); border: 1px solid rgba(245, 158, 11, 0.3); }
+        .badge-solved { background: rgba(16, 185, 129, 0.15); color: var(--success); border: 1px solid rgba(16, 185, 129, 0.3); }
+        .badge-open, .badge-solved {
+            font-size: 0.7rem; font-weight: 700; padding: 3px 8px; border-radius: 10px;
+            text-transform: uppercase; white-space: nowrap; flex-shrink: 0;
+        }
+
         .tab-content { display: none; }
         .tab-content.active { display: block; }
     </style>
@@ -277,6 +296,7 @@
             <button class="tab-btn" onclick="switchTab('solve')"><i class="fa-solid fa-calculator"></i> Równania & Pochodne</button>
             <button class="tab-btn" onclick="switchTab('normalize')"><i class="fa-solid fa-wand-magic-sparkles"></i> Normalizacja</button>
             <button class="tab-btn" onclick="switchTab('ambiguity')"><i class="fa-solid fa-triangle-exclamation"></i> Diagnostyka</button>
+            <button class="tab-btn" onclick="switchTab('millennium')"><i class="fa-solid fa-infinity"></i> Problemy Milenijne</button>
         </div>
 
         <!-- TAB 1: Pełna Walidacja -->
@@ -422,6 +442,27 @@
             </div>
         </div>
 
+        <!-- TAB 7: Problemy Milenijne -->
+        <div id="tab-millennium" class="tab-content">
+            <div class="grid">
+                <div class="card">
+                    <div class="card-title"><i class="fa-solid fa-magnifying-glass-chart"></i> Sprawdź Wyrażenie</div>
+                    <form onsubmit="handleMillennium(event)">
+                        <div class="form-group">
+                            <label>Wyrażenie (słowa kluczowe lub struktura symboliczna)</label>
+                            <input type="text" id="mill-expr" value="zeta(1/2 + I*t)" placeholder="np. zeta(s), NP-complete, Navier-Stokes...">
+                        </div>
+                        <button type="submit" class="btn-submit"><i class="fa-solid fa-magnifying-glass"></i> Sprawdź Powiązania</button>
+                    </form>
+                    <pre id="mill-result" class="result-box" style="margin-top: 1.25rem;">Czekam na dane...</pre>
+                </div>
+                <div class="card">
+                    <div class="card-title"><i class="fa-solid fa-list-ol"></i> Katalog 7 Problemów Milenijnych</div>
+                    <div id="mill-catalog" style="display: flex; flex-direction: column; gap: 10px;">Ładowanie katalogu...</div>
+                </div>
+            </div>
+        </div>
+
     </div>
 
     <script>
@@ -443,6 +484,7 @@
         }
         checkHealth();
         setInterval(checkHealth, 10000);
+        loadMillenniumCatalog();
 
         // Przełączanie zakładek
         function switchTab(tabId) {
@@ -557,6 +599,43 @@
             });
             const data = await res.json();
             document.getElementById('amb-result').innerText = JSON.stringify(data, null, 2);
+        }
+
+        async function handleMillennium(e) {
+            e.preventDefault();
+            const expression = document.getElementById('mill-expr').value;
+            const resultEl = document.getElementById('mill-result');
+            try {
+                const res = await fetch(`${API_URL}/api/v3/millennium`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ expression })
+                });
+                const data = await res.json();
+                resultEl.innerText = JSON.stringify(data, null, 2);
+            } catch (err) {
+                resultEl.innerText = 'Błąd połączenia z API: ' + err;
+            }
+        }
+
+        async function loadMillenniumCatalog() {
+            const el = document.getElementById('mill-catalog');
+            try {
+                const res = await fetch(`${API_URL}/api/v3/millennium/problems`);
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                const data = await res.json();
+                el.innerHTML = data.problems.map(p => `
+                    <div class="mill-item">
+                        <div>
+                            <div class="mill-name">${p.name}</div>
+                            <div class="mill-desc">${p.description}</div>
+                        </div>
+                        <span class="${p.status === 'SOLVED' ? 'badge-solved' : 'badge-open'}">${p.status}</span>
+                    </div>
+                `).join('');
+            } catch (err) {
+                el.innerHTML = '<span style="color: var(--text-muted); font-size: 0.85rem;">Nie udało się pobrać katalogu (API offline?)</span>';
+            }
         }
 
         async function fetchLaTeX(expression, targetElId) {
