@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<title>FAI – Topologiczny Validator Λ–τ–ρ</title>
+<style>
+  body { margin: 0; background: #000; color: #e6e6e6; font-family: "Segoe UI", sans-serif; }
+  header {
+    background: #111;
+    padding: 25px;
+    text-align: center;
+    border-bottom: 2px solid #333;
+  }
+  header h1 { margin: 0; font-size: 2.2em; color: #6cf; }
+  header p { margin: 8px 0 0; font-size: 1.1em; color: #aaa; }
+
+  #viewer {
+    width: 100%;
+    height: 480px;
+    background: #000;
+    border-bottom: 2px solid #222;
+  }
+
+  section {
+    padding: 30px;
+    max-width: 900px;
+    margin: auto;
+  }
+  section h2 {
+    color: #6cf;
+    border-bottom: 1px solid #333;
+    padding-bottom: 6px;
+  }
+  p { line-height: 1.6; font-size: 1.05em; }
+
+  #output {
+    background: #111;
+    padding: 15px;
+    border-radius: 8px;
+    margin-top: 20px;
+    font-family: monospace;
+    white-space: pre-line;
+  }
+
+  button {
+    background: #6cf;
+    color: #000;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 1em;
+    margin-top: 10px;
+  }
+  button:hover { background: #9df; }
+
+  footer {
+    background: #111;
+    text-align: center;
+    padding: 15px;
+    font-size: 0.9em;
+    color: #888;
+    border-top: 2px solid #333;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>FAI – Topologiczny Validator Λ–τ–ρ</h1>
+  <p>Interaktywna Tetroida + Walidacja warunku brzegowego 720°</p>
+</header>
+
+<div id="viewer"></div>
+
+<section>
+  <h2>Walidator Topologiczny (Python → Web)</h2>
+
+  <p>
+    Poniższy moduł wykonuje test domknięcia topologicznego w sferze Poincarégo
+    dla operatora J (helical twist) oraz sekwencji kątów τ:
+    <strong>[36°, 30°, 5.625°, 720°]</strong>.
+  </p>
+
+  <p>
+    Kod oblicza:
+    <ul>
+      <li>entropię początkową S_initial</li>
+      <li>entropię końcową S_final</li>
+      <li>dywergencję ΔS = S_final − S_initial</li>
+    </ul>
+    Warunek poprawności modelu: <strong>ΔS &lt; 0</strong> (kompresja topologiczna).
+  </p>
+
+  <button onclick="runValidator()">Uruchom walidator</button>
+
+  <div id="output">Kliknij przycisk, aby uruchomić test…</div>
+</section>
+
+<footer>
+  © 2026 Jacek Stanisław Kielich – Projekt FAI / TIMDR
+</footer>
+
+<!-- THREE.JS -->
+<script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
+<script src="https://unpkg.com/three@0.160.0/examples/js/controls/OrbitControls.js"></script>
+
+<script>
+/* ===========================
+   1. INTERAKTYWNA TETROIDA
+   =========================== */
+const container = document.getElementById('viewer');
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(container.clientWidth, container.clientHeight);
+renderer.setPixelRatio(window.devicePixelRatio);
+container.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x000000);
+
+const camera = new THREE.PerspectiveCamera(
+  45,
+  container.clientWidth / container.clientHeight,
+  0.1,
+  100
+);
+camera.position.set(3, 3, 4);
+
+const controls = new THREE.OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+
+scene.add(new THREE.AmbientLight(0x404040));
+const light = new THREE.PointLight(0xffffff, 1.2);
+light.position.set(5, 5, 5);
+scene.add(light);
+
+// Torus
+const torus = new THREE.Mesh(
+  new THREE.TorusGeometry(1.5, 0.35, 32, 96),
+  new THREE.MeshPhongMaterial({ color: 0x2288ff, emissive: 0x001020 })
+);
+scene.add(torus);
+
+// Tetroida
+const tetroid = new THREE.Group();
+const loopMat = new THREE.MeshPhongMaterial({ color: 0xff5533, emissive: 0x200000 });
+
+function makeLoop(angle) {
+  const g = new THREE.TorusKnotGeometry(0.7, 0.12, 128, 32, 2, 3);
+  const m = new THREE.Mesh(g, loopMat);
+  m.rotation.z = angle;
+  return m;
+}
+
+tetroid.add(makeLoop(0));
+tetroid.add(makeLoop((2 * Math.PI) / 3));
+tetroid.add(makeLoop((4 * Math.PI) / 3));
+scene.add(tetroid);
+
+function animate() {
+  requestAnimationFrame(animate);
+  tetroid.rotation.y += 0.003;
+  torus.rotation.x += 0.0015;
+  controls.update();
+  renderer.render(scene, camera);
+}
+animate();
+
+/* ===========================
+   2. WALIDATOR TOPOLOGICZNY
+   =========================== */
+function runValidator() {
+  const angles = [36, 30, 5.625, 720].map(a => a * Math.PI / 180);
+  let state = [1.0, 0.5, 0.2];
+
+  function twist(vec, angle) {
+    const m = angle / 2;
+    const M = [
+      [Math.cos(angle), -Math.sin(m), 0],
+      [Math.sin(m), Math.cos(angle), -Math.sin(angle)],
+      [0, Math.sin(angle), Math.cos(m)]
+    ];
+    return [
+      M[0][0]*vec[0] + M[0][1]*vec[1] + M[0][2]*vec[2],
+      M[1][0]*vec[0] + M[1][1]*vec[1] + M[1][2]*vec[2],
+      M[2][0]*vec[0] + M[2][1]*vec[1] + M[2][2]*vec[2]
+    ];
+  }
+
+  const initial = [...state];
+  for (const a of angles) state = twist(state, a);
+
+  function entropy(v) {
+    const p = v.map(x => Math.abs(x));
+    const s = p.reduce((a,b)=>a+b,0);
+    const n = p.map(x => x/s);
+    return -n.reduce((a,b)=>a + b*Math.log2(b + 1e-9), 0);
+  }
+
+  const S0 = entropy(initial);
+  const S1 = entropy(state);
+  const dS = S1 - S0;
+
+  const out = document.getElementById("output");
+  out.textContent =
+    "S_initial = " + S0.toFixed(6) + "\n" +
+    "S_final   = " + S1.toFixed(6) + "\n" +
+    "ΔS        = " + dS.toFixed(6) + "\n\n" +
+    (dS < 0 ? "WYNIK: KOMPresja topologiczna (ΔS < 0)" :
+              "WYNIK: BŁĄD DOMKNIĘCIA (ΔS ≥ 0)");
+}
+</script>
+
+</body>
+</html>

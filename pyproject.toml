@@ -1,0 +1,57 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "math-validator-3.0"
+version = "3.0.0"
+description = "Topologiczny walidator równań matematycznych"
+readme = "README.md"
+license = {text = "MIT"}
+authors = [
+    {name = "Jacek Kielich", email = "jbackk-lang@proton.me"}
+]
+requires-python = ">=3.8"
+dependencies = [
+    "numpy>=1.21.0",
+    "sympy>=1.9.0",
+    "pint>=0.19.0",
+    "fastapi>=0.85.0",
+    "uvicorn>=0.18.0"
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "black>=22.0.0",
+    "isort>=5.10.0",
+    "flake8>=5.0.0",
+    "mypy>=0.990",
+    "pdoc>=12.0.0"
+]
+api = [
+    "fastapi>=0.85.0",
+    "uvicorn>=0.18.0"
+]
+
+[project.scripts]
+math-validate = "math_validator.cli:main"
+
+[tool.setuptools]
+# POPRAWKA: `packages = [...]` (jawna lista) i `[tool.setuptools.packages.find]`
+# (auto-wykrywanie) to dwa WYKLUCZAJĄCE SIĘ sposoby konfiguracji tej samej
+# tabeli TOML `tool.setuptools.packages` - obecność obu naraz to nie tylko
+# konflikt semantyczny w setuptools, ale zwyczajnie NIEPOPRAWNY TOML (parser
+# zgłasza "Cannot declare ('tool', 'setuptools', 'packages', 'find') twice"),
+# co blokowało `pip install -e .` i `pytest` (przez konfigurację w tym samym
+# pliku) całkowicie - zanim jakikolwiek test mógł się uruchomić. Zostawiono
+# jawną listę (już poprawnie pomija plugins_examples/tests, których nie ma
+# na liście) i usunięto sprzeczny blok auto-wykrywania.
+packages = [
+    "core",
+    "filters",
+    "plugins",
+    "examples",
+    "test",
+    "tests"
+]
