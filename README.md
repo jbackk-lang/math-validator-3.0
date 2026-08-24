@@ -187,6 +187,8 @@ Endpointy:
 | POST | `/validate/matrix` | walidacja wyrażenia macierzowego |
 | POST | `/solve` | rozwiązuje `wyrażenie = 0` względem zmiennej |
 | POST | `/latex` | zwraca zapis LaTeX wyrażenia |
+| POST | `/millennium` | sprawdza wyrażenie pod kątem powiązań z 7 Problemami Milenijnymi |
+| GET | `/millennium/problems` | statyczny katalog wszystkich 7 Problemów Milenijnych (nazwa, status, opis) |
 
 Przykład:
 
@@ -194,6 +196,20 @@ Przykład:
 curl -X POST http://127.0.0.1:8000/validate \
   -H "Content-Type: application/json" \
   -d '{"expression": "2*x + 3*x"}'
+```
+
+`millennium_filter` był od dawna wpięty w `validate_all()`, ale pogrzebany
+wśród ~15 innych kluczy pełnej odpowiedzi. Dwa dedykowane endpointy
+wystawiają go bezpośrednio:
+
+```bash
+curl -X POST http://127.0.0.1:8000/millennium \
+  -H "Content-Type: application/json" \
+  -d '{"expression": "zeta(1/2 + I*t)"}'
+# {"triggered": true, "matches": [{"name": "Hipoteza Riemanna", ...}], ...}
+
+curl http://127.0.0.1:8000/millennium/problems
+# {"count": 7, "problems": [{"key": "Riemann", "status": "OPEN", ...}, ...]}
 ```
 
 ## Testy
