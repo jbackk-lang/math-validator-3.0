@@ -126,6 +126,21 @@ operują na innej gramatyce niż zwykłe wyrażenia algebraiczne.
 i istniały tam od początku — zniknęły przy pierwszej migracji do v3 (nie
 zostały skopiowane), przywrócono je 2026-08-24, patrz `CHANGELOG_v3.md`.
 
+**`prime_spectrum_filter.py` — naprawiony ungruntowany próg (2026-08-26).**
+Etykieta `log_spiral_1_over_f` wcześniej pojawiała się przy sztywnym,
+arbitralnym progu 0.25 i niosła dopisaną notatkę o zgodności z „TIMDR
+Λ–τ–ρ" — bez żadnego wsparcia statystycznego. Naprawiono: próg jest teraz
+liczony z modelu zerowego (1000 losowych ciągów o tej samej długości i
+zakresie kroków, próg = 5. percentyl). Sprawdzone empirycznie na
+niezależnych oknach wzdłuż prawdziwych liczb pierwszych do 10⁶: realne
+liczby pierwsze trafiają w tę etykietę **rzadziej** niż losowe ciągi
+(0.3%–2.7% wobec oczekiwanych ~5%), nie częściej — czyli filtr nie
+wykrywa niczego specyficznego dla liczb pierwszych. Twierdzenie o
+związku z TIMDR zostało w związku z tym usunięte z notatek filtra;
+klasyfikacja zwraca teraz też `diff_metric` i `null_threshold_5pct`, żeby
+wynik był sprawdzalny, nie tylko etykietowy. Patrz testy w
+`test/test_prime_spectrum_null_model.py`.
+
 ## Rozszerzalność (wtyczki)
 
 Własny filtr bez modyfikowania rdzenia:
