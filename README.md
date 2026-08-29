@@ -245,4 +245,6 @@ Zobacz [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 ## Licencja
 
-MIT — zobacz [`LICENSE`](LICENSE).
+Copyright (c) 2026 Jacek Kielich  
+This software is proprietary.  
+Unauthorized use, copying, modification, or distribution is strictly prohibited.
