@@ -204,6 +204,7 @@ Endpointy:
 | POST | `/latex` | zwraca zapis LaTeX wyrażenia |
 | POST | `/millennium` | sprawdza wyrażenie pod kątem powiązań z 7 Problemami Milenijnymi |
 | GET | `/millennium/problems` | statyczny katalog wszystkich 7 Problemów Milenijnych (nazwa, status, opis) |
+| POST | `/api/v3/paradox` | wykrywa paradoks logiczny (skali/struktury/założeń/continuum) w sekwencji kroków `steps` |
 
 Przykład:
 
@@ -227,6 +228,20 @@ curl http://127.0.0.1:8000/millennium/problems
 # {"count": 7, "problems": [{"key": "Riemann", "status": "OPEN", ...}, ...]}
 ```
 
+Ten samy problem widoczności dotyczył modułu paradoksów
+(`paradox_trigger_module.py`): był wpięty do `validate_all()` przez
+opcjonalny parametr `steps`, ale ani API, ani WebGUI go nie eksponowały —
+w praktyce nieużywalny bez czytania kodu `pipeline_v3.py`. Naprawione tym
+samym wzorcem — dedykowany endpoint plus zakładka "Paradoksy" w
+`index.html`:
+
+```bash
+curl -X POST http://127.0.0.1:8000/api/v3/paradox \
+  -H "Content-Type: application/json" \
+  -d '{"steps": [{"local_valid": true, "global_valid": false}]}'
+# {"triggered": true, "type": "scale", "location": 0, "message": "Local model works, global model breaks (scale paradox)."}
+```
+
 ## Testy
 
 ```bash
@@ -245,6 +260,4 @@ Zobacz [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 ## Licencja
 
-Copyright (c) 2026 Jacek Kielich  
-This software is proprietary.  
-Unauthorized use, copying, modification, or distribution is strictly prohibited.
+MIT — zobacz [`LICENSE`](LICENSE).
