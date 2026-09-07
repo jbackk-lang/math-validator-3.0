@@ -325,6 +325,7 @@
             <button class="tab-btn" onclick="switchTab('normalize')"><i class="fa-solid fa-wand-magic-sparkles"></i> Normalizacja</button>
             <button class="tab-btn" onclick="switchTab('ambiguity')"><i class="fa-solid fa-triangle-exclamation"></i> Diagnostyka</button>
             <button class="tab-btn" onclick="switchTab('millennium')"><i class="fa-solid fa-infinity"></i> Problemy Milenijne</button>
+            <button class="tab-btn" onclick="switchTab('paradox')"><i class="fa-solid fa-scale-unbalanced"></i> Paradoksy</button>
         </div>
 
         <!-- TAB 1: Pełna Walidacja -->
@@ -494,6 +495,36 @@
             </div>
         </div>
 
+        <!-- TAB 8: Paradoksy (moduł paradox_trigger_module.py) -->
+        <div id="tab-paradox" class="tab-content">
+            <div class="grid">
+                <div class="card">
+                    <div class="card-title"><i class="fa-solid fa-scale-unbalanced"></i> Kroki Derywacji</div>
+                    <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 0.75rem;">
+                        Moduł działa na SEKWENCJI kroków, nie na jednym wyrażeniu — podaj listę
+                        obiektów JSON, każdy opisujący jeden krok walidacji/derywacji.
+                        Klucze: local_valid/global_valid (paradoks skali),
+                        definition_changes_sense (paradoks struktury),
+                        assumptions_conflict (paradoks założeń),
+                        logical_jump_detected (paradoks continuum).
+                    </p>
+                    <form onsubmit="handleParadox(event)">
+                        <div class="form-group">
+                            <label>Kroki (JSON — lista obiektów)</label>
+                            <textarea id="par-steps" rows="6" style="width:100%; font-family:'Fira Code',monospace; background:var(--bg-input); color:var(--text-main); border:1px solid var(--border-color); border-radius:8px; padding:0.6rem;">[
+  {"local_valid": true, "global_valid": false}
+]</textarea>
+                        </div>
+                        <button type="submit" class="btn-submit"><i class="fa-solid fa-magnifying-glass"></i> Sprawdź Paradoks</button>
+                    </form>
+                </div>
+                <div class="card">
+                    <div class="card-title"><i class="fa-solid fa-triangle-exclamation"></i> Wynik</div>
+                    <pre id="par-result" class="result-box">Czekam na dane...</pre>
+                </div>
+            </div>
+        </div>
+
     </div>
 
     <script>
@@ -641,6 +672,29 @@
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({ expression })
+                });
+                const data = await res.json();
+                resultEl.innerText = JSON.stringify(data, null, 2);
+            } catch (err) {
+                resultEl.innerText = 'Błąd połączenia z API: ' + err;
+            }
+        }
+
+        async function handleParadox(e) {
+            e.preventDefault();
+            const resultEl = document.getElementById('par-result');
+            let steps;
+            try {
+                steps = JSON.parse(document.getElementById('par-steps').value);
+            } catch (err) {
+                resultEl.innerText = 'Niepoprawny JSON w polu kroków: ' + err;
+                return;
+            }
+            try {
+                const res = await fetch(`${API_URL}/api/v3/paradox`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ steps })
                 });
                 const data = await res.json();
                 resultEl.innerText = JSON.stringify(data, null, 2);

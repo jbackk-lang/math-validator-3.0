@@ -11,6 +11,13 @@ Użycie:
     validate_all("(A ∧ B) → C", formula=True)
     validate_all("v*t", units={"v": "m/s", "t": "s"})
     validate_all("Matrix([[1,2]]) * Matrix([[1,2]])", matrix=True)
+
+    # Moduł paradoksów (opcjonalny, patrz paradox_trigger_module.py):
+    # działa na SEKWENCJI kroków derywacji, nie na pojedynczym wyrażeniu,
+    # więc trzeba dostarczyć ją jawnie przez `steps`.
+    validate_all("...", steps=[
+        {"local_valid": True, "global_valid": False},  # -> paradoks skali
+    ])
 """
 from __future__ import annotations
 
@@ -29,6 +36,7 @@ from variables import analyze_variables
 from ambiguity import find_ambiguities, PrecedenceConfig
 from linalg import validate_matrix_expression
 from errors import diagnose_syntax
+from paradox_trigger_module import ParadoxTriggerModule
 import plugins
 
 
@@ -40,8 +48,17 @@ def validate_all(
     matrix: bool = False,
     precedence_config: Optional[PrecedenceConfig] = None,
     run_plugins: bool = True,
+    steps: Optional[list] = None,
 ) -> dict:
     result: dict = {"expression": expr}
+
+    # ── Moduł paradoksów (opcjonalny) ────────────────────────────────────
+    # Działa na sekwencji kroków DERYWACJI (steps), nie na samym `expr` —
+    # to inna granulacja niż resztka filtrów poniżej (jedno wyrażenie).
+    # Uruchamiany tylko, gdy caller jawnie dostarczy `steps`; bez tego
+    # nie ma nic do analizy i nie udajemy inaczej.
+    if steps is not None:
+        result["paradox"] = ParadoxTriggerModule().analyze(steps).as_dict()
 
     # ── Ścieżka: formuła logiki zdaniowej ────────────────────────────────
     if formula:
@@ -99,6 +116,7 @@ def validate_all(
         and result["syntax"].get("ok", True)
         and result.get("algebra", {}).get("status") != "error"
         and not result["syntax_diagnostics"]["diagnostics"]
+        and not result.get("paradox", {}).get("triggered", False)
     )
     result["status"] = "ok" if overall_ok else "issues_found"
     return result

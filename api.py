@@ -22,6 +22,7 @@ from errors import diagnose_syntax
 from filters.millennium_filter import MILLENNIUM_PROBLEMS, run as run_millennium
 from linalg import validate_matrix_expression
 from normalize import normalize_expression
+from paradox_trigger_module import ParadoxTriggerModule
 from pipeline_v3 import validate_all
 from sympy_bridge import SymPyBridge
 
@@ -43,6 +44,7 @@ app = FastAPI(
         {"name": "Przekształcenia", "description": "Normalizacja, rozwiązywanie i pochodne."},
         {"name": "Diagnostyka", "description": "Analiza niejednoznaczności i błędów składni."},
         {"name": "Problemy Milenijne", "description": "Wykrywanie powiązań wyrażenia z 7 Problemami Milenijnymi."},
+        {"name": "Paradoksy", "description": "Wykrywanie paradoksów logicznych w sekwencji kroków derywacji."},
         {"name": "System", "description": "Status działania usługi."},
     ],
 )
@@ -78,6 +80,16 @@ class ValidateRequest(BaseModel):
         default=False,
         description="Prawostronna (a^b^c = a^(b^c)) vs lewostronna łączność potęgowania"
     )
+    steps: Optional[List[Dict[str, Any]]] = Field(
+        default=None,
+        examples=[[{"local_valid": True, "global_valid": False}]],
+        description=(
+            "Opcjonalna sekwencja kroków derywacji do sprawdzenia modułem "
+            "paradoksów (patrz POST /api/v3/paradox). Bez tego pola klucz "
+            "'paradox' nie pojawia się w odpowiedzi - moduł nie zgaduje "
+            "kroków z samego wyrażenia."
+        )
+    )
 
 class FormulaRequest(BaseModel):
     formula: str = Field(..., examples=["(A ∧ B) → C"], description="Formuła logiki zdaniowej")
@@ -109,6 +121,19 @@ class MillenniumRequest(BaseModel):
         description="Wyrażenie sprawdzane pod kątem powiązań z Problemami Milenijnymi"
     )
 
+class ParadoxRequest(BaseModel):
+    steps: List[Dict[str, Any]] = Field(
+        ...,
+        examples=[[{"local_valid": True, "global_valid": False}]],
+        description=(
+            "Sekwencja kroków derywacji/walidacji. Klucze rozpoznawane przez "
+            "moduł: local_valid/global_valid (paradoks skali), "
+            "definition_changes_sense (paradoks struktury), "
+            "assumptions_conflict (paradoks założeń), "
+            "logical_jump_detected (paradoks continuum)."
+        )
+    )
+
 # ==============================================================================
 # ENDPOINTY SYSTEMOWE
 # ==============================================================================
@@ -131,7 +156,7 @@ def validate_expression(req: ValidateRequest) -> Dict[str, Any]:
         power_associativity="left" if req.power_left_assoc else "right",
     )
     try:
-        return validate_all(req.expression, units=req.units, precedence_config=config)
+        return validate_all(req.expression, units=req.units, precedence_config=config, steps=req.steps)
     except Exception as err:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -252,3 +277,29 @@ def list_millennium_problems() -> Dict[str, Any]:
             for key, info in MILLENNIUM_PROBLEMS.items()
         ],
     }
+
+# ==============================================================================
+# ENDPOINTY MODUŁU PARADOKSÓW
+# ==============================================================================
+# UWAGA: paradox_trigger_module.py (i jego stary duplikat
+# math_validator_triggers.py, teraz cienki re-eksport) był wpięty do
+# pipeline_v3.validate_all() przez parametr `steps`, ale ani API, ani WebGUI
+# nie eksponowały tego parametru - w praktyce moduł był niewidoczny dla
+# każdego, kto nie czyta kodu pipeline'u. Ten endpoint (plus pole `steps` w
+# ValidateRequest powyżej i zakładka "Paradoksy" w index.html) naprawia to,
+# tym samym wzorcem co /api/v3/millennium.
+
+@app.post(
+    "/api/v3/paradox",
+    tags=["Paradoksy"],
+    summary="Wykryj paradoks logiczny w sekwencji kroków derywacji",
+)
+def check_paradox(req: ParadoxRequest) -> Dict[str, Any]:
+    """
+    Analizuje sekwencję kroków derywacji/walidacji i zwraca pierwszy wykryty
+    paradoks (skali, struktury, założeń lub continuum), jeśli taki istnieje.
+    Działa na `steps` dostarczonych przez wywołującego, nie na jednym
+    wyrażeniu - w przeciwieństwie do reszty API tu nie ma nic do sparsowania
+    symbolicznie.
+    """
+    return ParadoxTriggerModule().analyze(req.steps).as_dict()
