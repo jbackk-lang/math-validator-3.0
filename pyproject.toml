@@ -27,7 +27,13 @@ dev = [
     "isort>=5.10.0",
     "flake8>=5.0.0",
     "mypy>=0.990",
-    "pdoc>=12.0.0"
+    "pdoc>=12.0.0",
+    "httpx2"
+    # httpx2: niedeklarowana wcześniej zależność przechodnia -
+    # starlette.testclient.TestClient (uzywany w test/test_api_*.py) wymaga
+    # httpx2 (nastepca httpx w tej wersji starlette), inaczej import test/
+    # padał na etapie collect z RuntimeError, zanim jakikolwiek test sie
+    # uruchomil (CI: test (3.12) - "Failed in 7 seconds").
 ]
 api = [
     "fastapi>=0.85.0",
@@ -35,23 +41,43 @@ api = [
 ]
 
 [project.scripts]
-math-validate = "math_validator.cli:main"
+math-validator = "cli:main"
 
 [tool.setuptools]
-# POPRAWKA: `packages = [...]` (jawna lista) i `[tool.setuptools.packages.find]`
-# (auto-wykrywanie) to dwa WYKLUCZAJĄCE SIĘ sposoby konfiguracji tej samej
-# tabeli TOML `tool.setuptools.packages` - obecność obu naraz to nie tylko
-# konflikt semantyczny w setuptools, ale zwyczajnie NIEPOPRAWNY TOML (parser
-# zgłasza "Cannot declare ('tool', 'setuptools', 'packages', 'find') twice"),
-# co blokowało `pip install -e .` i `pytest` (przez konfigurację w tym samym
-# pliku) całkowicie - zanim jakikolwiek test mógł się uruchomić. Zostawiono
-# jawną listę (już poprawnie pomija plugins_examples/tests, których nie ma
-# na liście) i usunięto sprzeczny blok auto-wykrywania.
-packages = [
+# POPRAWKA #2 (2026-09-08, CI: test (3.12) failing - "package directory 'core'
+# does not exist"): poprzednia jawna lista `packages = ["core","filters",
+# "plugins","examples","test","tests"]` zakładała pakiety, których w repo NIE
+# MA jako katalogów - "core", "plugins" i "tests" to literalnie nieistniejące
+# ścieżki (jest core.py i plugins.py jako pojedyncze pliki, jest "test" liczba
+# pojedyncza, nie "tests"). Cała baza kodu poza `filters/` (jedyny katalog z
+# `__init__.py`) to płaskie moduły importowane bezpośrednio z korzenia repo
+# (`from core import ParsedExpr`, `from linalg import ...`, `from ambiguity
+# import ...` - potwierdzone grepem po realnych importach w test/*.py,
+# api.py, cli.py). setuptools rozróżnia to jako `packages` (katalogi z
+# __init__.py) vs `py_modules` (pojedyncze pliki .py w korzeniu) - to dwie
+# różne opcje, nie jedna lista. Poprawiono też entry point:
+# `math_validator.cli:main` wskazywał na nieistniejący pakiet
+# `math_validator` (nigdy nie istniał w tym repo); `cli.py` w swoim własnym
+# docstringu deklaruje nazwę komendy `math-validator`, nie `math-validate`
+# - ujednolicono do tego, co faktycznie mówi kod.
+packages = ["filters"]
+py-modules = [
     "core",
-    "filters",
+    "ambiguity",
+    "linalg",
+    "normalize",
+    "errors",
+    "units",
+    "variables",
+    "sympy_bridge",
     "plugins",
-    "examples",
-    "test",
-    "tests"
+    "paradox_trigger_module",
+    "math_validator_triggers",
+    "pipeline_v3",
+    "api",
+    "cli",
+    "algebra",
+    "logic",
+    "parser",
+    "plot"
 ]
